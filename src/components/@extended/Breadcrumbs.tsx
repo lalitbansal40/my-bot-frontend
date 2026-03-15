@@ -184,7 +184,7 @@ const Breadcrumbs = ({
       breadcrumbContent = (
         <MainCard
           border={card}
-          sx={card === false ? { mb: 3, bgcolor: 'transparent', ...sx } : { mb: 3, ...sx }}
+          sx={card === false ? { mb: 1, bgcolor: 'transparent', ...sx } : { mb: 1, ...sx }}
           {...others}
           content={card}
           shadow="none"
@@ -213,12 +213,12 @@ const Breadcrumbs = ({
               </MuiBreadcrumbs>
             </Grid>
             {title && titleBottom && (
-              <Grid item sx={{ mt: card === false ? 0.25 : 1 }}>
-                <Typography variant="h2">{item.title}</Typography>
+              <Grid item sx={{ mt: card === false ? 0.1 : 0.5 }}>
+                <Typography variant="h4">{item.title}</Typography>
               </Grid>
             )}
           </Grid>
-          {card === false && divider !== false && <Divider sx={{ mt: 2 }} />}
+          {card === false && divider !== false && <Divider sx={{ mt: 1 }} />}
         </MainCard>
       );
     }

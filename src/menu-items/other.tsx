@@ -17,8 +17,8 @@ const icons = {
 // ==============================|| MENU ITEMS - SUPPORT ||============================== //
 
 const other: NavItemType = {
-  id: 'other',
-  title: <FormattedMessage id="others" />,
+  id: 'AdminTools',
+  title: <FormattedMessage id="AdminTools" />,
   type: 'group',
   children: [
     {

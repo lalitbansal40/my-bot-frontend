@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -11,7 +11,9 @@ import {
   Typography,
   useMediaQuery
 } from '@mui/material';
-
+import { Autocomplete, TextField } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import { channelService } from 'service/channel.service';
 // project imports
 import UserList from './UserList';
 import MainCard from 'components/MainCard';
@@ -36,17 +38,41 @@ interface ChatDrawerProps {
 
 function ChatDrawer({ handleDrawerOpen, openChatDrawer, setUser }: ChatDrawerProps) {
   const theme = useTheme();
-
   const matchDownLG = useMediaQuery(theme.breakpoints.down('lg'));
   const drawerBG = theme.palette.mode === ThemeMode.DARK ? 'dark.main' : 'white';
 
 
   const [search, setSearch] = useState<string | undefined>('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [channelId, setChannelId] = useState<string>('');
+
+  const { data } = useQuery({
+    queryKey: ['channels'],
+    queryFn: () => channelService.getChannels()
+  });
+
+  const channels = data?.data || [];
+
   const handleSearch = async (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | undefined) => {
     const newString = event?.target.value;
     setSearch(newString);
   };
 
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search || "");
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    if (channels.length && !channelId) {
+      setChannelId(channels[0]._id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channels]);
   return (
     <Drawer
       sx={{
@@ -84,23 +110,38 @@ function ChatDrawer({ handleDrawerOpen, openChatDrawer, setUser }: ChatDrawerPro
               </Typography>
             </Stack>
 
-            <OutlinedInput
-              fullWidth
-              id="input-search-header"
-              placeholder="Search"
-              value={search}
-              onChange={handleSearch}
-              sx={{
-                '& .MuiOutlinedInput-input': {
-                  p: '10.5px 0px 12px'
+            <Stack spacing={2}>
+
+              {/* CHANNEL SELECT */}
+              <Autocomplete
+                size="small"
+                options={channels}
+                value={channels.find((c: any) => c._id === channelId) || null}
+                getOptionLabel={(option: any) =>
+                  option?.channel_name || option?.display_phone_number || ''
                 }
-              }}
-              startAdornment={
-                <InputAdornment position="start">
-                  <SearchOutlined style={{ fontSize: 'small' }} />
-                </InputAdornment>
-              }
-            />
+                onChange={(e, value: any) => {
+                  setChannelId(value?._id || null);
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Channel" />
+                )}
+              />
+
+              {/* SEARCH */}
+              <OutlinedInput
+                fullWidth
+                placeholder="Search"
+                value={search}
+                onChange={handleSearch}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <SearchOutlined style={{ fontSize: 'small' }} />
+                  </InputAdornment>
+                }
+              />
+
+            </Stack>
           </Stack>
         </Box>
 
@@ -108,11 +149,11 @@ function ChatDrawer({ handleDrawerOpen, openChatDrawer, setUser }: ChatDrawerPro
           sx={{
             overflowX: 'hidden',
             height: matchDownLG ? 'calc(100vh - 120px)' : 'calc(100vh - 428px)',
-            minHeight: matchDownLG ? 0 : 420
+            minHeight: matchDownLG ? 0 : 620
           }}
         >
           <Box sx={{ p: 3, pt: 0 }}>
-            <UserList setUser={setUser} search={search} />
+            <UserList setUser={setUser} search={debouncedSearch} channelId={channelId} />
           </Box>
         </SimpleBar>
       </MainCard>

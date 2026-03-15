@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
-import { useMediaQuery, Box, Chip, Collapse, Divider, Grid, Stack, Switch, Typography } from '@mui/material';
+import { useMediaQuery, Box, Collapse, Divider, Grid, Stack, Switch, Typography } from '@mui/material';
 
 // types
 import { UserProfile } from 'types/user-profile';
@@ -50,18 +50,18 @@ const UserDetails = ({ user, onClose }: Props) => {
 
   if (Object.keys(user).length === 0) return <Typography>...Loading</Typography>;
 
-  let statusBGColor;
-  let statusColor;
-  if (user.online_status === 'available') {
-    statusBGColor = theme.palette.success.lighter;
-    statusColor = theme.palette.success.main;
-  } else if (user.online_status === 'do_not_disturb') {
-    statusBGColor = theme.palette.grey.A100;
-    statusColor = theme.palette.grey.A200;
-  } else {
-    statusBGColor = theme.palette.warning.lighter;
-    statusColor = theme.palette.warning.main;
-  }
+  // let statusBGColor;
+  // let statusColor;
+  // if (user.online_status === 'available') {
+  //   statusBGColor = theme.palette.success.lighter;
+  //   statusColor = theme.palette.success.main;
+  // } else if (user.online_status === 'do_not_disturb') {
+  //   statusBGColor = theme.palette.grey.A100;
+  //   statusColor = theme.palette.grey.A200;
+  // } else {
+  //   statusBGColor = theme.palette.warning.lighter;
+  //   statusColor = theme.palette.warning.main;
+  // }
 
   return (
     <MainCard
@@ -117,7 +117,7 @@ const UserDetails = ({ user, onClose }: Props) => {
               sx={{ mt: 0.75, '& .MuiChip-root': { height: '24px' } }}
             >
               <AvatarStatus status={user.online_status!} />
-              <Chip
+              {/* <Chip
                 label={user?.online_status!.replaceAll('_', ' ')}
                 sx={{
                   bgcolor: statusBGColor,
@@ -125,7 +125,7 @@ const UserDetails = ({ user, onClose }: Props) => {
                   color: statusColor,
                   '& .MuiChip-label': { px: 1 }
                 }}
-              />
+              /> */}
             </Stack>
           </Grid>
         </Grid>

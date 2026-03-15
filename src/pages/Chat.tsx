@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-
+import { CircularProgress } from '@mui/material';
 // material-ui
 import { useTheme, styled, Theme } from '@mui/material/styles';
 import {
   Box,
-  ClickAwayListener,
+  // ClickAwayListener,
   Collapse,
   Dialog,
   Grid,
   Menu,
   MenuItem,
-  Popper,
+  // Popper,
   Stack,
   TextField,
   Typography,
@@ -18,7 +18,12 @@ import {
 } from '@mui/material';
 
 // third party
-import EmojiPicker, { SkinTones, EmojiClickData } from 'emoji-picker-react';
+// import
+// EmojiPicker,
+// {
+// SkinTones,
+// EmojiClickData
+// } from 'emoji-picker-react';
 
 // project import
 import ChatDrawer from 'sections/ChatDrawer';
@@ -27,34 +32,33 @@ import UserAvatar from 'sections/UserAvatar';
 import UserDetails from 'sections/UserDetails';
 
 import MainCard from 'components/MainCard';
-import IconButton from 'components/@extended/IconButton';
+// import IconButton from 'components/@extended/IconButton';
 import SimpleBar from 'components/third-party/SimpleBar';
 import { PopupTransition } from 'components/@extended/Transitions';
 
 import { dispatch, useSelector } from 'store';
-import { openDrawer } from 'store/reducers/menu';
+// import { openDrawer } from 'store/reducers/menu';
 import { openSnackbar } from 'store/reducers/snackbar';
-import { getUser, getUserChats, insertChat } from 'store/reducers/chat';
+import { getUserChats } from 'store/reducers/chat';
 
 // assets
 import {
   AudioMutedOutlined,
   DeleteOutlined,
   DownloadOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  MoreOutlined,
-  PaperClipOutlined,
-  PictureOutlined,
-  SendOutlined,
-  SmileOutlined,
-  SoundOutlined
+  // MoreOutlined,
+  // PaperClipOutlined,
+  // PictureOutlined,
+  // SendOutlined,
+  // SmileOutlined,
+  // SoundOutlined
 } from '@ant-design/icons';
 
 // types
 import { History as HistoryProps } from 'types/chat';
 import { UserProfile } from 'types/user-profile';
 import { ThemeMode } from 'types/config';
+import { messageService } from 'service/message.service';
 
 const drawerWidth = 320;
 
@@ -82,7 +86,10 @@ const Main = styled('main', { shouldForwardProp: (prop: string) => prop !== 'ope
 
 const Chat = () => {
   const theme = useTheme();
-
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const bottomRef = useRef<any>(null);
+  const scrollRef = useRef<any>(null);
   const matchDownSM = useMediaQuery(theme.breakpoints.down('lg'));
   const matchDownMD = useMediaQuery(theme.breakpoints.down('md'));
   const [emailDetails, setEmailDetails] = useState(false);
@@ -92,9 +99,9 @@ const Chat = () => {
   const chatState = useSelector((state: any) => state?.chat || {});
   const [anchorEl, setAnchorEl] = useState<Element | ((element: Element) => Element) | null | undefined>(null);
 
-  const handleClickSort = (event: React.MouseEvent<HTMLButtonElement> | undefined) => {
-    setAnchorEl(event?.currentTarget);
-  };
+  // const handleClickSort = (event: React.MouseEvent<HTMLButtonElement> | undefined) => {
+  //   setAnchorEl(event?.currentTarget);
+  // };
 
   const handleCloseSort = () => {
     setAnchorEl(null);
@@ -109,72 +116,108 @@ const Chat = () => {
     setOpenChatDrawer((prevState) => !prevState);
   };
 
-  const [anchorElEmoji, setAnchorElEmoji] = useState<any>(); /** No single type can cater for all elements */
+  // const [anchorElEmoji, setAnchorElEmoji] = useState<any>(); /** No single type can cater for all elements */
 
-  const handleOnEmojiButtonClick = (event: React.MouseEvent<HTMLButtonElement> | undefined) => {
-    setAnchorElEmoji(anchorElEmoji ? null : event?.currentTarget);
-  };
+  // const handleOnEmojiButtonClick = (event: React.MouseEvent<HTMLButtonElement> | undefined) => {
+  //   setAnchorElEmoji(anchorElEmoji ? null : event?.currentTarget);
+  // };
 
   // handle new message form
   const [message, setMessage] = useState('');
   const textInput = useRef(null);
 
-  const handleOnSend = () => {
-    if (message.trim() === '') {
+  const handleOnSend = async () => {
+    if (!message.trim()) {
       dispatch(
         openSnackbar({
           open: true,
           message: 'Message required',
           variant: 'alert',
-          alert: {
-            color: 'error'
-          },
+          alert: { color: 'error' },
           close: false
         })
       );
-    } else {
-      const d = new Date();
-      const newMessage = {
-        from: 'User1',
-        to: user?.name,
-        text: message,
-        time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setData((prevState) => [...prevState, newMessage]);
-      dispatch(insertChat(newMessage));
-    }
-    setMessage('');
-  };
-
-  const handleEnter = (event: React.KeyboardEvent<HTMLDivElement> | undefined) => {
-    if (event?.key !== 'Enter') {
       return;
     }
-    handleOnSend();
+
+    if (!user?._id || !user?.channel_id) return;
+
+    const tempMessage = {
+      _id: `temp-${Date.now()}`,
+      direction: "OUT",
+      type: "text",
+      payload: { text: message },
+      createdAt: new Date().toISOString()
+    };
+
+    // optimistic UI
+    setData((prev) => [...prev, tempMessage as any]);
+
+    const text = message;
+    setMessage("");
+
+    try {
+      await messageService.sendMessage({
+        channelId: user.channel_id,
+        contactId: user._id,
+        text
+      });
+
+    } catch (err) {
+      console.error(err);
+
+      dispatch(
+        openSnackbar({
+          open: true,
+          message: 'Failed to send message',
+          variant: 'alert',
+          alert: { color: 'error' },
+          close: false
+        })
+      );
+    }
   };
+
+  const loadOlderMessages = async () => {
+    if (!cursor || loadingMore || !user?._id) return;
+
+    try {
+      setLoadingMore(true);
+
+      const res = await messageService.getMessages(user._id, cursor);
+
+      setData((prev) => [...res.data, ...prev]); // prepend old messages
+      setCursor(res.nextCursor || null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
 
   // handle emoji
-  const onEmojiClick = (emojiObject: EmojiClickData, event: MouseEvent) => {
-    setMessage(message + emojiObject.emoji);
-  };
+  // const onEmojiClick = (emojiObject: EmojiClickData, event: MouseEvent) => {
+  //   setMessage(message + emojiObject.emoji);
+  // };
 
-  const emojiOpen = Boolean(anchorElEmoji);
-  const emojiId = emojiOpen ? 'simple-popper' : undefined;
+  // const emojiOpen = Boolean(anchorElEmoji);
+  // const emojiId = emojiOpen ? 'simple-popper' : undefined;
 
-  const handleCloseEmoji = () => {
-    setAnchorElEmoji(null);
-  };
+  // const handleCloseEmoji = () => {
+  //   setAnchorElEmoji(null);
+  // };
 
   // close sidebar when widow size below 'md' breakpoint
   useEffect(() => {
     setOpenChatDrawer(!matchDownSM);
   }, [matchDownSM]);
 
-  useEffect(() => {
-    if (chatState?.user) {
-      setUser(chatState.user);
-    }
-  }, [chatState?.user]);
+  // useEffect(() => {
+  //   if (chatState?.user) {
+  //     setUser(chatState.user);
+  //   }
+  // }, [chatState?.user]);
 
   useEffect(() => {
     if (chatState?.chats) {
@@ -182,18 +225,54 @@ const Chat = () => {
     }
   }, [chatState?.chats]);
 
-  useEffect(() => {
-    // hide left drawer when email app opens
-    dispatch(openDrawer(false));
-    dispatch(getUser(1));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // useEffect(() => {
+  //   // hide left drawer when email app opens
+  //   dispatch(openDrawer(false));
+  //   dispatch(getUser(1));
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
 
   useEffect(() => {
     if (user?.name) {
       dispatch(getUserChats(user.name));
     }
   }, [user?.name]);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      const res = await messageService.getMessages(user?._id || '');
+
+      setData(res.data);
+      setCursor(res.nextCursor || null);
+    };
+
+    if (user?._id) {
+      fetchMessages();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+
+    if (!el) return;
+
+    const handleScroll = () => {
+      if (el.scrollTop === 0) {
+        loadOlderMessages();
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll);
+
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursor, user]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [data]);
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -234,9 +313,6 @@ const Chat = () => {
                   <Grid container justifyContent="space-between">
                     <Grid item>
                       <Stack direction="row" alignItems="center" spacing={1}>
-                        <IconButton onClick={handleDrawerOpen} color="secondary" size="large">
-                          {openChatDrawer ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
-                        </IconButton>
                         <UserAvatar
                           user={{
                             online_status: user?.online_status,
@@ -247,16 +323,16 @@ const Chat = () => {
                         <Stack>
                           <Typography variant="subtitle1">{user?.name}</Typography>
                           <Typography variant="caption" color="textSecondary">
-                            Active {user?.lastMessage} ago
+                            {user?.phone}
                           </Typography>
                         </Stack>
                       </Stack>
                     </Grid>
                     <Grid item>
                       <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1}>
-                        <IconButton onClick={handleClickSort} size="large" color="secondary">
+                        {/* <IconButton onClick={handleClickSort} size="large" color="secondary">
                           <MoreOutlined />
-                        </IconButton>
+                        </IconButton> */}
                         <Menu
                           id="simple-menu"
                           //   anchorEl={anchorEl}
@@ -297,6 +373,7 @@ const Chat = () => {
                 </Grid>
                 <Grid item xs={12}>
                   <SimpleBar
+                    scrollableNodeProps={{ ref: scrollRef }}
                     sx={{
                       overflowX: 'hidden',
                       height: 'calc(100vh - 410px)',
@@ -304,7 +381,25 @@ const Chat = () => {
                     }}
                   >
                     <Box sx={{ pl: 1, pr: 3 }}>
+
+                      {/* Loader for pagination */}
+                      {loadingMore && (
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            py: 1
+                          }}
+                        >
+                          <CircularProgress size={20} />
+                        </Box>
+                      )}
+
                       <ChatHistory theme={theme} user={user ?? {}} data={data} />
+
+                      {/* Scroll target */}
+                      <div ref={bottomRef} />
+
                     </Box>
                   </SimpleBar>
                 </Grid>
@@ -318,14 +413,30 @@ const Chat = () => {
                       placeholder="Your Message..."
                       value={message}
                       onChange={(e) => setMessage(e.target.value.length <= 1 ? e.target.value.trim() : e.target.value)}
-                      onKeyPress={handleEnter}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleOnSend();
+                        }
+                      }}
                       variant="standard"
                       sx={{
-                        pr: 2,
-                        '& .MuiInput-root:before': { borderBottomColor: theme.palette.divider }
+                        "& .MuiInput-underline:before": {
+                          borderBottom: "none"
+                        },
+                        "& .MuiInput-underline:after": {
+                          borderBottom: "none"
+                        },
+                        "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
+                          borderBottom: "none"
+                        }
                       }}
+                    // sx={{
+                    //   pr: 2,
+                    //   '& .MuiInput-root:before': { borderBottomColor: theme.palette.divider }
+                    // }}
                     />
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    {/* <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Stack direction="row" sx={{ py: 2, ml: -1 }}>
                         <>
                           <IconButton
@@ -375,7 +486,7 @@ const Chat = () => {
                       <IconButton color="primary" onClick={handleOnSend} size="large" sx={{ mr: 1.5 }}>
                         <SendOutlined />
                       </IconButton>
-                    </Stack>
+                    </Stack> */}
                   </Stack>
                 </Grid>
               </Grid>

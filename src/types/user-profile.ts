@@ -1,5 +1,5 @@
 export type UserProfile = {
-  id?: string;
+  _id?: string;
   avatar?: string;
   image?: string;
   name?: string;
@@ -24,6 +24,7 @@ export type UserProfile = {
   // groups?: Group[];
   time?: string;
   tier?: string;
+  channel_id?: string;
   // Progress?: ProfileProgress;
 };
 

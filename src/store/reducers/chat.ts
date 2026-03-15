@@ -83,7 +83,7 @@ export function insertChat(chat: any) {
 export function getUsers() {
   return async () => {
     try {
-      const response = await axios.get('/api/chat/users');
+      const response = await axios.get('contact/6958cb9d2c8d8392c3eba002');
       dispatch(chat.actions.getUsersSuccess(response.data.users));
     } catch (error) {
       dispatch(chat.actions.hasError(error));
